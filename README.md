@@ -10,12 +10,32 @@ A REST API for calculating the actual interest rate earned from UK NS&I Premium 
 
 ## Getting started
 
+### Local development
+
 ```bash
 npm install
 npm run dev
 ```
 
-The API runs on `http://localhost:3000` by default. Configure the port in `.env`.
+### Docker
+
+```bash
+docker compose up --build
+```
+
+Rebuilding is only needed when dependencies or the `Dockerfile` change. For subsequent starts:
+
+```bash
+docker compose up
+```
+
+To stop:
+
+```bash
+docker compose down
+```
+
+The API runs on `http://localhost:3000` by default. Configure the port and allowed origins in `.env` (copy from `.env.example`).
 
 Swagger UI is available at `http://localhost:3000/api-docs` once the server is running.
 

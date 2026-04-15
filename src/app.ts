@@ -118,8 +118,9 @@ const swaggerSpec = swaggerJsdoc({
       },
     },
   },
-  // swagger-jsdoc scans these files for @openapi JSDoc comments
-  apis: ['./src/routes/*.ts'],
+  // In production (Docker) the app runs from dist/, so point at compiled JS.
+  // In development ts-node-dev runs from src/, so point at TypeScript source.
+  apis: [process.env.NODE_ENV === 'production' ? './dist/routes/*.js' : './src/routes/*.ts'],
 });
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
