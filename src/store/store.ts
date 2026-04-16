@@ -3,6 +3,7 @@ import path from 'path';
 import crypto from 'crypto';
 
 const STORE_PATH = path.join(__dirname, '../../data/store.json');
+const EMPTY_STORE: Store = { transactions: [], prizes: [] };
 
 // Synchronous I/O is intentional — this is a single-user local tool with no
 // concurrent writes, so sync keeps the code simple without any practical cost.
@@ -26,6 +27,11 @@ interface Store {
 }
 
 function read(): Store {
+  if (!fs.existsSync(STORE_PATH)) {
+    fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
+    fs.writeFileSync(STORE_PATH, JSON.stringify(EMPTY_STORE, null, 2));
+    return EMPTY_STORE;
+  }
   const raw = fs.readFileSync(STORE_PATH, 'utf-8');
   return JSON.parse(raw) as Store;
 }
