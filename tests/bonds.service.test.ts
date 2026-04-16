@@ -104,14 +104,14 @@ describe('calculateBondStats', () => {
   });
 
   describe('overall summary', () => {
-    it('sums total invested from deposits only', () => {
+    it('subtracts withdrawals from total invested', () => {
       const transactions: Transaction[] = [
         { date: d('2022-01-01'), amount: 1000, type: 'deposit' },
         { date: d('2022-06-01'), amount: 500, type: 'deposit' },
         { date: d('2023-01-01'), amount: 200, type: 'withdrawal' },
       ];
       const result = calculateBondStats(transactions, []);
-      expect(result.overall.totalInvested).toBe(1500);
+      expect(result.overall.totalInvested).toBe(1300);
     });
 
     it('sums total prizes won across all years', () => {

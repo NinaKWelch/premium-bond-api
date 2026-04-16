@@ -6,8 +6,8 @@ import * as store from '../src/store/store';
 jest.mock('../src/store/store');
 const mockStore = store as jest.Mocked<typeof store>;
 
-const DEPOSIT = { date: '2022-01-01', amount: 1000, type: 'deposit' as const };
-const PRIZE = { date: '2022-06-01', amount: 25 };
+const DEPOSIT = { date: '2022-01', amount: 1000, type: 'deposit' as const };
+const PRIZE = { date: '2022-06', amount: 25 };
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -50,7 +50,7 @@ describe('POST /api/bonds/transactions', () => {
   it('returns 400 for missing type', async () => {
     const res = await request(app)
       .post('/api/bonds/transactions')
-      .send({ date: '2022-01-01', amount: 1000 })
+      .send({ date: '2022-01', amount: 1000 })
       .expect(400);
 
     expect(res.body.details.fieldErrors).toHaveProperty('type');
@@ -59,7 +59,7 @@ describe('POST /api/bonds/transactions', () => {
   it('returns 400 for negative amount', async () => {
     const res = await request(app)
       .post('/api/bonds/transactions')
-      .send({ date: '2022-01-01', amount: -500, type: 'deposit' })
+      .send({ date: '2022-01', amount: -500, type: 'deposit' })
       .expect(400);
 
     expect(res.body.details.fieldErrors).toHaveProperty('amount');
@@ -76,12 +76,12 @@ describe('POST /api/bonds/transactions', () => {
 
   it('returns 400 when withdrawal would exceed balance', async () => {
     mockStore.getTransactions.mockReturnValue([
-      { id: '1', date: '2022-01-01', amount: 500, type: 'deposit' },
+      { id: '1', date: '2022-01', amount: 500, type: 'deposit' },
     ]);
 
     const res = await request(app)
       .post('/api/bonds/transactions')
-      .send({ date: '2022-06-01', amount: 1000, type: 'withdrawal' })
+      .send({ date: '2022-06', amount: 1000, type: 'withdrawal' })
       .expect(400);
 
     expect(res.body.error).toMatch(/exceed/i);
@@ -89,15 +89,15 @@ describe('POST /api/bonds/transactions', () => {
 
   it('returns 201 when withdrawal is within balance', async () => {
     mockStore.getTransactions.mockReturnValue([
-      { id: '1', date: '2022-01-01', amount: 1000, type: 'deposit' },
+      { id: '1', date: '2022-01', amount: 1000, type: 'deposit' },
     ]);
     mockStore.addTransaction.mockReturnValue({
-      id: '2', date: '2022-06-01', amount: 500, type: 'withdrawal',
+      id: '2', date: '2022-06', amount: 500, type: 'withdrawal',
     });
 
     await request(app)
       .post('/api/bonds/transactions')
-      .send({ date: '2022-06-01', amount: 500, type: 'withdrawal' })
+      .send({ date: '2022-06', amount: 500, type: 'withdrawal' })
       .expect(201);
   });
 });
@@ -121,12 +121,12 @@ describe('GET /api/bonds/transactions', () => {
 
 describe('PUT /api/bonds/transactions/:id', () => {
   it('returns 200 with updated transaction', async () => {
-    const updated = { id: 'abc', date: '2022-03-01', amount: 2000, type: 'deposit' as const };
+    const updated = { id: 'abc', date: '2022-03', amount: 2000, type: 'deposit' as const };
     mockStore.updateTransaction.mockReturnValue(updated);
 
     const res = await request(app)
       .put('/api/bonds/transactions/abc')
-      .send({ date: '2022-03-01', amount: 2000, type: 'deposit' })
+      .send({ date: '2022-03', amount: 2000, type: 'deposit' })
       .expect(200);
 
     expect(res.body).toMatchObject({ id: 'abc', amount: 2000 });
@@ -146,7 +146,7 @@ describe('PUT /api/bonds/transactions/:id', () => {
   it('returns 400 for invalid body', async () => {
     const res = await request(app)
       .put('/api/bonds/transactions/abc')
-      .send({ date: '2022-01-01', amount: -100, type: 'deposit' })
+      .send({ date: '2022-01', amount: -100, type: 'deposit' })
       .expect(400);
 
     expect(res.body.details.fieldErrors).toHaveProperty('amount');
@@ -156,13 +156,13 @@ describe('PUT /api/bonds/transactions/:id', () => {
     // Existing: £1000 deposit + £500 withdrawal. Changing deposit to £400
     // would leave the withdrawal uncovered.
     mockStore.getTransactions.mockReturnValue([
-      { id: 'abc', date: '2022-01-01', amount: 1000, type: 'deposit' },
-      { id: 'def', date: '2022-06-01', amount: 500, type: 'withdrawal' },
+      { id: 'abc', date: '2022-01', amount: 1000, type: 'deposit' },
+      { id: 'def', date: '2022-06', amount: 500, type: 'withdrawal' },
     ]);
 
     const res = await request(app)
       .put('/api/bonds/transactions/abc')
-      .send({ date: '2022-01-01', amount: 400, type: 'deposit' })
+      .send({ date: '2022-01', amount: 400, type: 'deposit' })
       .expect(400);
 
     expect(res.body.error).toMatch(/negative/i);
@@ -185,7 +185,7 @@ describe('DELETE /api/bonds/transactions/:id', () => {
 describe('POST /api/bonds/prizes', () => {
   it('returns 201 with the created prize when date is after first deposit month', async () => {
     mockStore.getTransactions.mockReturnValue([
-      { id: '1', date: '2022-01-01', amount: 1000, type: 'deposit' },
+      { id: '1', date: '2022-01', amount: 1000, type: 'deposit' },
     ]);
     mockStore.addPrize.mockReturnValue({ id: 'xyz', ...PRIZE });
 
@@ -199,12 +199,12 @@ describe('POST /api/bonds/prizes', () => {
 
   it('returns 400 when prize is in the same month as the first deposit', async () => {
     mockStore.getTransactions.mockReturnValue([
-      { id: '1', date: '2022-06-01', amount: 1000, type: 'deposit' },
+      { id: '1', date: '2022-06', amount: 1000, type: 'deposit' },
     ]);
 
     const res = await request(app)
       .post('/api/bonds/prizes')
-      .send({ date: '2022-06-15', amount: 25 })
+      .send({ date: '2022-06', amount: 25 })
       .expect(400);
 
     expect(res.body.error).toMatch(/later month/i);
@@ -224,7 +224,7 @@ describe('POST /api/bonds/prizes', () => {
   it('returns 400 for missing amount', async () => {
     const res = await request(app)
       .post('/api/bonds/prizes')
-      .send({ date: '2022-06-01' })
+      .send({ date: '2022-06' })
       .expect(400);
 
     expect(res.body.details.fieldErrors).toHaveProperty('amount');
@@ -251,14 +251,14 @@ describe('GET /api/bonds/prizes', () => {
 describe('PUT /api/bonds/prizes/:id', () => {
   it('returns 200 with updated prize', async () => {
     mockStore.getTransactions.mockReturnValue([
-      { id: '1', date: '2022-01-01', amount: 1000, type: 'deposit' },
+      { id: '1', date: '2022-01', amount: 1000, type: 'deposit' },
     ]);
-    const updated = { id: 'xyz', date: '2022-09-01', amount: 50 };
+    const updated = { id: 'xyz', date: '2022-09', amount: 50 };
     mockStore.updatePrize.mockReturnValue(updated);
 
     const res = await request(app)
       .put('/api/bonds/prizes/xyz')
-      .send({ date: '2022-09-01', amount: 50 })
+      .send({ date: '2022-09', amount: 50 })
       .expect(200);
 
     expect(res.body).toMatchObject({ id: 'xyz', amount: 50 });
@@ -266,7 +266,7 @@ describe('PUT /api/bonds/prizes/:id', () => {
 
   it('returns 404 when prize does not exist', async () => {
     mockStore.getTransactions.mockReturnValue([
-      { id: '1', date: '2022-01-01', amount: 1000, type: 'deposit' },
+      { id: '1', date: '2022-01', amount: 1000, type: 'deposit' },
     ]);
     mockStore.updatePrize.mockReturnValue(null);
 

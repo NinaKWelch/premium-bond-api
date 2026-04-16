@@ -140,8 +140,7 @@ export function calculateBondStats(
   }
 
   const totalInvested = transactions
-    .filter((t) => t.type === 'deposit')
-    .reduce((sum, t) => sum + t.amount, 0);
+    .reduce((sum, t) => sum + (t.type === 'deposit' ? t.amount : -t.amount), 0);
   const totalPrizesWon = prizes.reduce((sum, p) => sum + p.amount, 0);
 
   // Overall rate = average annual prizes / average annual balance.
