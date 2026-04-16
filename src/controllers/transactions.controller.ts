@@ -3,15 +3,15 @@ import { addTransactionSchema } from '../schemas/bonds.schemas';
 import { addTransaction, getTransactions, updateTransaction, removeTransaction } from '../store/store';
 import { wouldBalanceGoNegative } from '../services/bonds.service';
 
-export function list(_req: Request, res: Response, next: NextFunction): void {
+export async function list(_req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    res.json(getTransactions());
+    res.json(await getTransactions());
   } catch (err) {
     next(err);
   }
 }
 
-export function add(req: Request, res: Response, next: NextFunction): void {
+export async function add(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const parsed = addTransactionSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -23,7 +23,7 @@ export function add(req: Request, res: Response, next: NextFunction): void {
     }
 
     if (parsed.data.type === 'withdrawal') {
-      const existing = getTransactions().map((t) => ({ ...t, date: new Date(`${t.date.slice(0, 7)}-01`) }));
+      const existing = (await getTransactions()).map((t) => ({ ...t, date: new Date(`${t.date.slice(0, 7)}-01`) }));
       const candidate = { ...parsed.data, date: new Date(`${parsed.data.date.slice(0, 7)}-01`) };
       if (wouldBalanceGoNegative([...existing, candidate])) {
         res.status(400).json({ error: 'Withdrawal would exceed current balance' });
@@ -31,14 +31,14 @@ export function add(req: Request, res: Response, next: NextFunction): void {
       }
     }
 
-    const record = addTransaction(parsed.data);
+    const record = await addTransaction(parsed.data);
     res.status(201).json(record);
   } catch (err) {
     next(err);
   }
 }
 
-export function update(req: Request, res: Response, next: NextFunction): void {
+export async function update(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = req.params['id'] as string;
     const parsed = addTransactionSchema.safeParse(req.body);
@@ -51,7 +51,7 @@ export function update(req: Request, res: Response, next: NextFunction): void {
     }
 
     // Validate balance by simulating the store with this transaction replaced
-    const existing = getTransactions()
+    const existing = (await getTransactions())
       .filter((t) => t.id !== id)
       .map((t) => ({ ...t, date: new Date(`${t.date.slice(0, 7)}-01`) }));
     const candidate = { ...parsed.data, date: new Date(`${parsed.data.date.slice(0, 7)}-01`) };
@@ -60,7 +60,7 @@ export function update(req: Request, res: Response, next: NextFunction): void {
       return;
     }
 
-    const record = updateTransaction(id, parsed.data);
+    const record = await updateTransaction(id, parsed.data);
     if (!record) {
       res.status(404).json({ error: 'Transaction not found' });
       return;
@@ -71,10 +71,10 @@ export function update(req: Request, res: Response, next: NextFunction): void {
   }
 }
 
-export function remove(req: Request, res: Response, next: NextFunction): void {
+export async function remove(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const id = req.params['id'] as string;
-    const deleted = removeTransaction(id);
+    const deleted = await removeTransaction(id);
     if (!deleted) {
       res.status(404).json({ error: 'Transaction not found' });
       return;

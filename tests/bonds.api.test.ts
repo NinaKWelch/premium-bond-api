@@ -1,10 +1,22 @@
 import request from 'supertest';
 import app from '../src/app';
-import * as store from '../src/store/store';
+import type * as StoreModule from '../src/store/store';
 
-// Isolate tests from the real store file
-jest.mock('../src/store/store');
-const mockStore = store as jest.Mocked<typeof store>;
+// Isolate tests from the real store — factory avoids loading the Prisma client
+jest.mock('../src/store/store', () => ({
+  getTransactions: jest.fn(),
+  getPrizes: jest.fn(),
+  getAll: jest.fn(),
+  addTransaction: jest.fn(),
+  updateTransaction: jest.fn(),
+  removeTransaction: jest.fn(),
+  addPrize: jest.fn(),
+  updatePrize: jest.fn(),
+  removePrize: jest.fn(),
+}));
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const mockStore = require('../src/store/store') as jest.Mocked<typeof StoreModule>;
 
 const DEPOSIT = { date: '2022-01', amount: 1000, type: 'deposit' as const };
 const PRIZE = { date: '2022-06', amount: 25 };
@@ -13,7 +25,7 @@ beforeEach(() => jest.clearAllMocks());
 
 describe('GET /api/bonds/calculate', () => {
   it('returns 200 with calculation when store has data', async () => {
-    mockStore.getAll.mockReturnValue({
+    mockStore.getAll.mockResolvedValue({
       transactions: [{ id: '1', ...DEPOSIT }],
       prizes: [{ id: '1', ...PRIZE }],
     });
@@ -28,7 +40,7 @@ describe('GET /api/bonds/calculate', () => {
   });
 
   it('returns 400 when no deposits are stored', async () => {
-    mockStore.getAll.mockReturnValue({ transactions: [], prizes: [] });
+    mockStore.getAll.mockResolvedValue({ transactions: [], prizes: [] });
 
     const res = await request(app).get('/api/bonds/calculate').expect(400);
     expect(res.body.error).toMatch(/no deposits/i);
@@ -37,7 +49,7 @@ describe('GET /api/bonds/calculate', () => {
 
 describe('POST /api/bonds/transactions', () => {
   it('returns 201 with the created transaction', async () => {
-    mockStore.addTransaction.mockReturnValue({ id: 'abc', ...DEPOSIT });
+    mockStore.addTransaction.mockResolvedValue({ id: 'abc', ...DEPOSIT });
 
     const res = await request(app)
       .post('/api/bonds/transactions')
@@ -75,7 +87,7 @@ describe('POST /api/bonds/transactions', () => {
   });
 
   it('returns 400 when withdrawal would exceed balance', async () => {
-    mockStore.getTransactions.mockReturnValue([
+    mockStore.getTransactions.mockResolvedValue([
       { id: '1', date: '2022-01', amount: 500, type: 'deposit' },
     ]);
 
@@ -88,10 +100,10 @@ describe('POST /api/bonds/transactions', () => {
   });
 
   it('returns 201 when withdrawal is within balance', async () => {
-    mockStore.getTransactions.mockReturnValue([
+    mockStore.getTransactions.mockResolvedValue([
       { id: '1', date: '2022-01', amount: 1000, type: 'deposit' },
     ]);
-    mockStore.addTransaction.mockReturnValue({
+    mockStore.addTransaction.mockResolvedValue({
       id: '2', date: '2022-06', amount: 500, type: 'withdrawal',
     });
 
@@ -104,7 +116,7 @@ describe('POST /api/bonds/transactions', () => {
 
 describe('GET /api/bonds/transactions', () => {
   it('returns stored transactions', async () => {
-    mockStore.getTransactions.mockReturnValue([{ id: 'abc', ...DEPOSIT }]);
+    mockStore.getTransactions.mockResolvedValue([{ id: 'abc', ...DEPOSIT }]);
 
     const res = await request(app).get('/api/bonds/transactions').expect(200);
     expect(res.body).toHaveLength(1);
@@ -112,7 +124,7 @@ describe('GET /api/bonds/transactions', () => {
   });
 
   it('returns empty array when no transactions stored', async () => {
-    mockStore.getTransactions.mockReturnValue([]);
+    mockStore.getTransactions.mockResolvedValue([]);
 
     const res = await request(app).get('/api/bonds/transactions').expect(200);
     expect(res.body).toEqual([]);
@@ -122,7 +134,8 @@ describe('GET /api/bonds/transactions', () => {
 describe('PUT /api/bonds/transactions/:id', () => {
   it('returns 200 with updated transaction', async () => {
     const updated = { id: 'abc', date: '2022-03', amount: 2000, type: 'deposit' as const };
-    mockStore.updateTransaction.mockReturnValue(updated);
+    mockStore.getTransactions.mockResolvedValue([]);
+    mockStore.updateTransaction.mockResolvedValue(updated);
 
     const res = await request(app)
       .put('/api/bonds/transactions/abc')
@@ -133,7 +146,8 @@ describe('PUT /api/bonds/transactions/:id', () => {
   });
 
   it('returns 404 when transaction does not exist', async () => {
-    mockStore.updateTransaction.mockReturnValue(null);
+    mockStore.getTransactions.mockResolvedValue([]);
+    mockStore.updateTransaction.mockResolvedValue(null);
 
     const res = await request(app)
       .put('/api/bonds/transactions/bad-id')
@@ -155,7 +169,7 @@ describe('PUT /api/bonds/transactions/:id', () => {
   it('returns 400 when update would cause balance to go negative', async () => {
     // Existing: £1000 deposit + £500 withdrawal. Changing deposit to £400
     // would leave the withdrawal uncovered.
-    mockStore.getTransactions.mockReturnValue([
+    mockStore.getTransactions.mockResolvedValue([
       { id: 'abc', date: '2022-01', amount: 1000, type: 'deposit' },
       { id: 'def', date: '2022-06', amount: 500, type: 'withdrawal' },
     ]);
@@ -171,12 +185,12 @@ describe('PUT /api/bonds/transactions/:id', () => {
 
 describe('DELETE /api/bonds/transactions/:id', () => {
   it('returns 204 when transaction is deleted', async () => {
-    mockStore.removeTransaction.mockReturnValue(true);
+    mockStore.removeTransaction.mockResolvedValue(true);
     await request(app).delete('/api/bonds/transactions/abc').expect(204);
   });
 
   it('returns 404 when transaction does not exist', async () => {
-    mockStore.removeTransaction.mockReturnValue(false);
+    mockStore.removeTransaction.mockResolvedValue(false);
     const res = await request(app).delete('/api/bonds/transactions/bad-id').expect(404);
     expect(res.body.error).toMatch(/not found/i);
   });
@@ -184,10 +198,10 @@ describe('DELETE /api/bonds/transactions/:id', () => {
 
 describe('POST /api/bonds/prizes', () => {
   it('returns 201 with the created prize when date is after first deposit month', async () => {
-    mockStore.getTransactions.mockReturnValue([
+    mockStore.getTransactions.mockResolvedValue([
       { id: '1', date: '2022-01', amount: 1000, type: 'deposit' },
     ]);
-    mockStore.addPrize.mockReturnValue({ id: 'xyz', ...PRIZE });
+    mockStore.addPrize.mockResolvedValue({ id: 'xyz', ...PRIZE });
 
     const res = await request(app)
       .post('/api/bonds/prizes')
@@ -198,7 +212,7 @@ describe('POST /api/bonds/prizes', () => {
   });
 
   it('returns 400 when prize is in the same month as the first deposit', async () => {
-    mockStore.getTransactions.mockReturnValue([
+    mockStore.getTransactions.mockResolvedValue([
       { id: '1', date: '2022-06', amount: 1000, type: 'deposit' },
     ]);
 
@@ -211,7 +225,7 @@ describe('POST /api/bonds/prizes', () => {
   });
 
   it('returns 400 when no deposits exist', async () => {
-    mockStore.getTransactions.mockReturnValue([]);
+    mockStore.getTransactions.mockResolvedValue([]);
 
     const res = await request(app)
       .post('/api/bonds/prizes')
@@ -233,7 +247,7 @@ describe('POST /api/bonds/prizes', () => {
 
 describe('GET /api/bonds/prizes', () => {
   it('returns stored prizes', async () => {
-    mockStore.getPrizes.mockReturnValue([{ id: 'xyz', ...PRIZE }]);
+    mockStore.getPrizes.mockResolvedValue([{ id: 'xyz', ...PRIZE }]);
 
     const res = await request(app).get('/api/bonds/prizes').expect(200);
     expect(res.body).toHaveLength(1);
@@ -241,7 +255,7 @@ describe('GET /api/bonds/prizes', () => {
   });
 
   it('returns empty array when no prizes stored', async () => {
-    mockStore.getPrizes.mockReturnValue([]);
+    mockStore.getPrizes.mockResolvedValue([]);
 
     const res = await request(app).get('/api/bonds/prizes').expect(200);
     expect(res.body).toEqual([]);
@@ -250,11 +264,11 @@ describe('GET /api/bonds/prizes', () => {
 
 describe('PUT /api/bonds/prizes/:id', () => {
   it('returns 200 with updated prize', async () => {
-    mockStore.getTransactions.mockReturnValue([
+    mockStore.getTransactions.mockResolvedValue([
       { id: '1', date: '2022-01', amount: 1000, type: 'deposit' },
     ]);
     const updated = { id: 'xyz', date: '2022-09', amount: 50 };
-    mockStore.updatePrize.mockReturnValue(updated);
+    mockStore.updatePrize.mockResolvedValue(updated);
 
     const res = await request(app)
       .put('/api/bonds/prizes/xyz')
@@ -265,10 +279,10 @@ describe('PUT /api/bonds/prizes/:id', () => {
   });
 
   it('returns 404 when prize does not exist', async () => {
-    mockStore.getTransactions.mockReturnValue([
+    mockStore.getTransactions.mockResolvedValue([
       { id: '1', date: '2022-01', amount: 1000, type: 'deposit' },
     ]);
-    mockStore.updatePrize.mockReturnValue(null);
+    mockStore.updatePrize.mockResolvedValue(null);
 
     const res = await request(app)
       .put('/api/bonds/prizes/bad-id')
@@ -290,12 +304,12 @@ describe('PUT /api/bonds/prizes/:id', () => {
 
 describe('DELETE /api/bonds/prizes/:id', () => {
   it('returns 204 when prize is deleted', async () => {
-    mockStore.removePrize.mockReturnValue(true);
+    mockStore.removePrize.mockResolvedValue(true);
     await request(app).delete('/api/bonds/prizes/xyz').expect(204);
   });
 
   it('returns 404 when prize does not exist', async () => {
-    mockStore.removePrize.mockReturnValue(false);
+    mockStore.removePrize.mockResolvedValue(false);
     const res = await request(app).delete('/api/bonds/prizes/bad-id').expect(404);
     expect(res.body.error).toMatch(/not found/i);
   });

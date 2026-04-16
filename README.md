@@ -10,11 +10,36 @@ A REST API for calculating the actual effective interest rate earned from UK NS&
 
 ## Getting started
 
+### Prerequisites
+
+- Node.js 20+
+- A PostgreSQL database (the project uses [Neon](https://neon.tech) — free tier available)
+
 ### Local development
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```
+PORT=3000
+ALLOWED_ORIGINS=http://localhost:5173
+DATABASE_URL="postgresql://user:password@host/dbname?sslmode=require"
+```
+
+Then install dependencies and run the dev server:
 
 ```bash
 npm install
 npm run dev
+```
+
+The API runs on `http://localhost:3000` by default.
+
+### Database setup
+
+The project uses [Prisma](https://www.prisma.io/) with PostgreSQL. To create the tables in a fresh database:
+
+```bash
+npx prisma migrate deploy
 ```
 
 ### Docker
@@ -34,17 +59,6 @@ To stop:
 ```bash
 docker compose down
 ```
-
-### Environment
-
-Copy `.env.example` to `.env` and adjust as needed:
-
-```
-PORT=3000
-ALLOWED_ORIGINS=http://localhost:5173
-```
-
-The API runs on `http://localhost:3000` by default.
 
 ## Scripts
 
@@ -139,10 +153,6 @@ curl http://localhost:3000/api/bonds/calculate
   }
 }
 ```
-
-## Data storage
-
-Data is persisted in `data/store.json` on disk. This file is gitignored so your personal data is never committed. The file and directory are created automatically on first run. When you are ready to move to a database, only the store layer needs to change — all calculation logic stays the same.
 
 ## Running tests
 

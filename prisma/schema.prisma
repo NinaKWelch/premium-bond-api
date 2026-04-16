@@ -1,0 +1,26 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TransactionType {
+  deposit
+  withdrawal
+}
+
+model Transaction {
+  id     String          @id @default(uuid())
+  date   String
+  amount Float
+  type   TransactionType
+}
+
+model Prize {
+  id     String @id @default(uuid())
+  date   String
+  amount Float
+}

@@ -1,12 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-
-const STORE_PATH = path.join(__dirname, '../../data/store.json');
-const EMPTY_STORE: Store = { transactions: [], prizes: [] };
-
-// Synchronous I/O is intentional — this is a single-user local tool with no
-// concurrent writes, so sync keeps the code simple without any practical cost.
+import { PrismaPg } from '@prisma/adapter-pg';
+import { PrismaClient } from '../generated/prisma/client.js';
+import type { TransactionType } from '../generated/prisma/enums.js';
 
 export interface StoredTransaction {
   id: string;
@@ -21,95 +15,76 @@ export interface StoredPrize {
   amount: number;
 }
 
-interface Store {
-  transactions: StoredTransaction[];
-  prizes: StoredPrize[];
+const adapter = new PrismaPg({ connectionString: process.env['DATABASE_URL'] });
+const prisma = new PrismaClient({ adapter });
+
+export async function getTransactions(): Promise<StoredTransaction[]> {
+  const rows = await prisma.transaction.findMany({ orderBy: { date: 'asc' } });
+  return rows.map((r) => ({ ...r, type: r.type as 'deposit' | 'withdrawal' }));
 }
 
-function read(): Store {
-  if (!fs.existsSync(STORE_PATH)) {
-    fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
-    fs.writeFileSync(STORE_PATH, JSON.stringify(EMPTY_STORE, null, 2));
-    return EMPTY_STORE;
+export async function getPrizes(): Promise<StoredPrize[]> {
+  return prisma.prize.findMany({ orderBy: { date: 'asc' } });
+}
+
+export async function getAll(): Promise<{ transactions: StoredTransaction[]; prizes: StoredPrize[] }> {
+  const [transactions, prizes] = await Promise.all([getTransactions(), getPrizes()]);
+  return { transactions, prizes };
+}
+
+export async function addTransaction(
+  data: Omit<StoredTransaction, 'id'>,
+): Promise<StoredTransaction> {
+  const row = await prisma.transaction.create({
+    data: { ...data, type: data.type as TransactionType },
+  });
+  return { ...row, type: row.type as 'deposit' | 'withdrawal' };
+}
+
+export async function updateTransaction(
+  id: string,
+  data: Omit<StoredTransaction, 'id'>,
+): Promise<StoredTransaction | null> {
+  try {
+    const row = await prisma.transaction.update({
+      where: { id },
+      data: { ...data, type: data.type as TransactionType },
+    });
+    return { ...row, type: row.type as 'deposit' | 'withdrawal' };
+  } catch {
+    return null;
   }
-  const raw = fs.readFileSync(STORE_PATH, 'utf-8');
-  return JSON.parse(raw) as Store;
 }
 
-function write(store: Store): void {
-  fs.writeFileSync(STORE_PATH, JSON.stringify(store, null, 2));
+export async function removeTransaction(id: string): Promise<boolean> {
+  try {
+    await prisma.transaction.delete({ where: { id } });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-export function getAll(): Store {
-  return read();
+export async function addPrize(data: Omit<StoredPrize, 'id'>): Promise<StoredPrize> {
+  return prisma.prize.create({ data });
 }
 
-export function getTransactions(): StoredTransaction[] {
-  return read().transactions;
-}
-
-export function getPrizes(): StoredPrize[] {
-  return read().prizes;
-}
-
-export function addTransaction(
-  data: Omit<StoredTransaction, 'id'>
-): StoredTransaction {
-  const store = read();
-  const record: StoredTransaction = { id: crypto.randomUUID(), ...data };
-  store.transactions.push(record);
-  write(store);
-  return record;
-}
-
-export function removeTransaction(id: string): boolean {
-  const store = read();
-  const before = store.transactions.length;
-  store.transactions = store.transactions.filter((t) => t.id !== id);
-  // If the length didn't change, no record matched the id
-  if (store.transactions.length === before) return false;
-  write(store);
-  return true;
-}
-
-export function addPrize(data: Omit<StoredPrize, 'id'>): StoredPrize {
-  const store = read();
-  const record: StoredPrize = { id: crypto.randomUUID(), ...data };
-  store.prizes.push(record);
-  write(store);
-  return record;
-}
-
-export function updateTransaction(
+export async function updatePrize(
   id: string,
-  data: Omit<StoredTransaction, 'id'>
-): StoredTransaction | null {
-  const store = read();
-  const index = store.transactions.findIndex((t) => t.id === id);
-  if (index === -1) return null;
-  store.transactions[index] = { id, ...data };
-  write(store);
-  return store.transactions[index];
+  data: Omit<StoredPrize, 'id'>,
+): Promise<StoredPrize | null> {
+  try {
+    return await prisma.prize.update({ where: { id }, data });
+  } catch {
+    return null;
+  }
 }
 
-export function updatePrize(
-  id: string,
-  data: Omit<StoredPrize, 'id'>
-): StoredPrize | null {
-  const store = read();
-  const index = store.prizes.findIndex((p) => p.id === id);
-  if (index === -1) return null;
-  store.prizes[index] = { id, ...data };
-  write(store);
-  return store.prizes[index];
-}
-
-export function removePrize(id: string): boolean {
-  const store = read();
-  const before = store.prizes.length;
-  store.prizes = store.prizes.filter((p) => p.id !== id);
-  // If the length didn't change, no record matched the id
-  if (store.prizes.length === before) return false;
-  write(store);
-  return true;
+export async function removePrize(id: string): Promise<boolean> {
+  try {
+    await prisma.prize.delete({ where: { id } });
+    return true;
+  } catch {
+    return false;
+  }
 }

@@ -7,6 +7,3 @@ services:
       - NODE_ENV=production
     env_file:
       - .env
-    volumes:
-      # Persists store.json outside the container so data survives restarts
-      - ./data:/app/data
