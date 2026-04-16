@@ -1,6 +1,6 @@
 # premium-bond-api
 
-A REST API for calculating the actual interest rate earned from UK NS&I Premium Bonds based on your real investment history and prize winnings.
+A REST API for calculating the actual effective interest rate earned from UK NS&I Premium Bonds, based on your real investment history and prize winnings. Built to power the [NinaKWelch/premium-bond](https://github.com/NinaKWelch/premium-bond) frontend.
 
 ## How it works
 
@@ -35,11 +35,29 @@ To stop:
 docker compose down
 ```
 
-The API runs on `http://localhost:3000` by default. Configure the port and allowed origins in `.env` (copy from `.env.example`).
+### Environment
+
+Copy `.env.example` to `.env` and adjust as needed:
+
+```
+PORT=3000
+ALLOWED_ORIGINS=http://localhost:5173
+```
+
+The API runs on `http://localhost:3000` by default.
+
+## Scripts
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Compile TypeScript |
+| `npm start` | Run compiled build |
+| `npm test` | Run tests |
+
+## API
 
 Swagger UI is available at `http://localhost:3000/api-docs` once the server is running.
-
-## Endpoints
 
 ### Transactions
 
@@ -65,61 +83,29 @@ Swagger UI is available at `http://localhost:3000/api-docs` once the server is r
 |--------|------|-------------|
 | `GET` | `/api/bonds/calculate` | Calculate effective interest from stored data |
 
-## Usage examples
+Dates use `YYYY-MM` format throughout.
 
-**List all transactions**
-```bash
-curl http://localhost:3000/api/bonds/transactions
-```
+## Usage examples
 
 **Add a deposit**
 ```bash
 curl -X POST http://localhost:3000/api/bonds/transactions \
   -H "Content-Type: application/json" \
-  -d '{"date": "2022-01-15", "amount": 1000, "type": "deposit"}'
+  -d '{"date": "2022-01", "amount": 1000, "type": "deposit"}'
 ```
 
 **Add a withdrawal**
 ```bash
 curl -X POST http://localhost:3000/api/bonds/transactions \
   -H "Content-Type: application/json" \
-  -d '{"date": "2023-06-01", "amount": 500, "type": "withdrawal"}'
-```
-
-**Update a transaction**
-```bash
-curl -X PUT http://localhost:3000/api/bonds/transactions/<id> \
-  -H "Content-Type: application/json" \
-  -d '{"date": "2022-01-15", "amount": 1500, "type": "deposit"}'
-```
-
-**Delete a transaction**
-```bash
-curl -X DELETE http://localhost:3000/api/bonds/transactions/<id>
-```
-
-**List all prizes**
-```bash
-curl http://localhost:3000/api/bonds/prizes
+  -d '{"date": "2023-06", "amount": 500, "type": "withdrawal"}'
 ```
 
 **Add a prize**
 ```bash
 curl -X POST http://localhost:3000/api/bonds/prizes \
   -H "Content-Type: application/json" \
-  -d '{"date": "2022-09-10", "amount": 25}'
-```
-
-**Update a prize**
-```bash
-curl -X PUT http://localhost:3000/api/bonds/prizes/<id> \
-  -H "Content-Type: application/json" \
-  -d '{"date": "2022-09-10", "amount": 50}'
-```
-
-**Delete a prize**
-```bash
-curl -X DELETE http://localhost:3000/api/bonds/prizes/<id>
+  -d '{"date": "2022-09", "amount": 25}'
 ```
 
 **Calculate your effective interest rate**
@@ -133,28 +119,30 @@ curl http://localhost:3000/api/bonds/calculate
   "byYear": [
     {
       "year": 2022,
-      "averageBalance": 1254.79,
+      "amountInvested": 1000,
+      "averageBalance": 504.79,
       "prizesWon": 25,
-      "effectiveRatePct": 1.99
+      "effectiveRatePct": 4.95
     },
     {
       "year": 2023,
-      "averageBalance": 1500,
+      "amountInvested": -500,
+      "averageBalance": 723.29,
       "prizesWon": 50,
-      "effectiveRatePct": 3.33
+      "effectiveRatePct": 6.91
     }
   ],
   "overall": {
-    "totalInvested": 1500,
+    "totalInvested": 500,
     "totalPrizesWon": 75,
-    "averageAnnualRatePct": 2.72
+    "averageAnnualRatePct": 6.12
   }
 }
 ```
 
 ## Data storage
 
-Data is persisted in `data/store.json` on disk. This file is gitignored so your personal data is never committed. When you are ready to move to a database, only the store layer needs to change — all calculation logic stays the same.
+Data is persisted in `data/store.json` on disk. This file is gitignored so your personal data is never committed. The file and directory are created automatically on first run. When you are ready to move to a database, only the store layer needs to change — all calculation logic stays the same.
 
 ## Running tests
 
