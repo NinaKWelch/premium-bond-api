@@ -4,8 +4,8 @@ import { addPrize, getPrizes, getTransactions, updatePrize, removePrize } from '
 import { isPrizeEligible } from '../services/bonds.service';
 
 function validatePrizeDate(date: string, res: Response): boolean {
-  const deposits = getTransactions().map((t) => ({ ...t, date: new Date(t.date) }));
-  if (!isPrizeEligible(new Date(date), deposits)) {
+  const deposits = getTransactions().map((t) => ({ ...t, date: new Date(`${t.date.slice(0, 7)}-01`) }));
+  if (!isPrizeEligible(new Date(`${date.slice(0, 7)}-01`), deposits)) {
     if (deposits.filter((t) => t.type === 'deposit').length === 0) {
       res.status(400).json({ error: 'No deposits found — add a deposit before recording prizes' });
     } else {

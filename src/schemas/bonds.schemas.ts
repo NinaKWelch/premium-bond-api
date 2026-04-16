@@ -1,24 +1,28 @@
 import { z } from 'zod';
 
+const yearMonthSchema = z
+  .string()
+  .regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'date must be in YYYY-MM format');
+
 export const addTransactionSchema = z.object({
-  date: z.string().date('date must be a valid ISO 8601 date (YYYY-MM-DD)'),
-  amount: z.number().positive('amount must be a positive number'),
+  date: yearMonthSchema,
+  amount: z.number().positive('amount must be a positive number').max(50000, 'maximum holding is £50,000'),
   type: z.enum(['deposit', 'withdrawal']),
 });
 
 export const addPrizeSchema = z.object({
-  date: z.string().date('date must be a valid ISO 8601 date (YYYY-MM-DD)'),
-  amount: z.number().positive('amount must be a positive number'),
+  date: yearMonthSchema,
+  amount: z.number().positive('amount must be a positive number').max(1000000, 'maximum prize is £1,000,000'),
 });
 
 const transactionSchema = z.object({
-  date: z.string().date('date must be a valid ISO 8601 date (YYYY-MM-DD)'),
+  date: yearMonthSchema,
   amount: z.number().positive('amount must be a positive number'),
   type: z.enum(['deposit', 'withdrawal']),
 });
 
 const prizeSchema = z.object({
-  date: z.string().date('date must be a valid ISO 8601 date (YYYY-MM-DD)'),
+  date: yearMonthSchema,
   amount: z.number().positive('amount must be a positive number'),
 });
 

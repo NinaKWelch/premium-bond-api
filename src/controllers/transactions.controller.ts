@@ -23,8 +23,8 @@ export function add(req: Request, res: Response, next: NextFunction): void {
     }
 
     if (parsed.data.type === 'withdrawal') {
-      const existing = getTransactions().map((t) => ({ ...t, date: new Date(t.date) }));
-      const candidate = { ...parsed.data, date: new Date(parsed.data.date) };
+      const existing = getTransactions().map((t) => ({ ...t, date: new Date(`${t.date.slice(0, 7)}-01`) }));
+      const candidate = { ...parsed.data, date: new Date(`${parsed.data.date.slice(0, 7)}-01`) };
       if (wouldBalanceGoNegative([...existing, candidate])) {
         res.status(400).json({ error: 'Withdrawal would exceed current balance' });
         return;
@@ -53,8 +53,8 @@ export function update(req: Request, res: Response, next: NextFunction): void {
     // Validate balance by simulating the store with this transaction replaced
     const existing = getTransactions()
       .filter((t) => t.id !== id)
-      .map((t) => ({ ...t, date: new Date(t.date) }));
-    const candidate = { ...parsed.data, date: new Date(parsed.data.date) };
+      .map((t) => ({ ...t, date: new Date(`${t.date.slice(0, 7)}-01`) }));
+    const candidate = { ...parsed.data, date: new Date(`${parsed.data.date.slice(0, 7)}-01`) };
     if (wouldBalanceGoNegative([...existing, candidate])) {
       res.status(400).json({ error: 'Transaction would cause balance to go negative' });
       return;

@@ -11,6 +11,7 @@ export interface Prize {
 
 export interface YearResult {
   year: number;
+  amountInvested: number;
   averageBalance: number;
   prizesWon: number;
   effectiveRatePct: number;
@@ -128,11 +129,14 @@ export function calculateBondStats(
     const prizesWon = prizes
       .filter((p) => p.date.getFullYear() === year)
       .reduce((sum, p) => sum + p.amount, 0);
+    const amountInvested = transactions
+      .filter((t) => t.date.getFullYear() === year)
+      .reduce((sum, t) => sum + (t.type === 'deposit' ? t.amount : -t.amount), 0);
 
     const effectiveRatePct =
       avgBalance > 0 ? Number(((prizesWon / avgBalance) * 100).toFixed(2)) : 0;
 
-    byYear.push({ year, averageBalance: avgBalance, prizesWon, effectiveRatePct });
+    byYear.push({ year, amountInvested, averageBalance: avgBalance, prizesWon, effectiveRatePct });
   }
 
   const totalInvested = transactions

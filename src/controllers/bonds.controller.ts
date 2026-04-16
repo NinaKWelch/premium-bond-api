@@ -12,8 +12,8 @@ export function calculate(_req: Request, res: Response, next: NextFunction): voi
     }
 
     const result = calculateBondStats(
-      transactions.map((t) => ({ ...t, date: new Date(t.date) })),
-      prizes.map((p) => ({ ...p, date: new Date(p.date) }))
+      transactions.map((t) => ({ ...t, date: new Date(`${t.date.slice(0, 7)}-01`) })),
+      prizes.map((p) => ({ ...p, date: new Date(`${p.date.slice(0, 7)}-01`) }))
     );
 
     res.json(result);
