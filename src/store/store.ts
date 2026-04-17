@@ -18,71 +18,83 @@ export interface StoredPrize {
 const adapter = new PrismaPg({ connectionString: process.env['DATABASE_URL'] });
 const prisma = new PrismaClient({ adapter });
 
-export async function getTransactions(): Promise<StoredTransaction[]> {
-  const rows = await prisma.transaction.findMany({ orderBy: { date: 'asc' } });
+export async function getTransactions(userId: string): Promise<StoredTransaction[]> {
+  const rows = await prisma.transaction.findMany({
+    where: { userId },
+    orderBy: { date: 'asc' },
+  });
+
   return rows.map((r) => ({ ...r, type: r.type as 'deposit' | 'withdrawal' | 'reinvestment' }));
 }
 
-export async function getPrizes(): Promise<StoredPrize[]> {
-  return prisma.prize.findMany({ orderBy: { date: 'asc' } });
+export async function getPrizes(userId: string): Promise<StoredPrize[]> {
+  return prisma.prize.findMany({ where: { userId }, orderBy: { date: 'asc' } });
 }
 
-export async function getAll(): Promise<{ transactions: StoredTransaction[]; prizes: StoredPrize[] }> {
-  const [transactions, prizes] = await Promise.all([getTransactions(), getPrizes()]);
+export async function getAll(
+  userId: string,
+): Promise<{ transactions: StoredTransaction[]; prizes: StoredPrize[] }> {
+  const [transactions, prizes] = await Promise.all([getTransactions(userId), getPrizes(userId)]);
+
   return { transactions, prizes };
 }
 
 export async function addTransaction(
+  userId: string,
   data: Omit<StoredTransaction, 'id'>,
 ): Promise<StoredTransaction> {
   const row = await prisma.transaction.create({
-    data: { ...data, type: data.type as TransactionType },
+    data: { ...data, userId, type: data.type as TransactionType },
   });
+
   return { ...row, type: row.type as 'deposit' | 'withdrawal' | 'reinvestment' };
 }
 
 export async function updateTransaction(
   id: string,
+  userId: string,
   data: Omit<StoredTransaction, 'id'>,
 ): Promise<StoredTransaction | null> {
   try {
     const row = await prisma.transaction.update({
-      where: { id },
+      where: { id, userId },
       data: { ...data, type: data.type as TransactionType },
     });
+    
     return { ...row, type: row.type as 'deposit' | 'withdrawal' | 'reinvestment' };
   } catch {
     return null;
   }
 }
 
-export async function removeTransaction(id: string): Promise<boolean> {
+export async function removeTransaction(id: string, userId: string): Promise<boolean> {
   try {
-    await prisma.transaction.delete({ where: { id } });
+    await prisma.transaction.delete({ where: { id, userId } });
     return true;
   } catch {
     return false;
   }
 }
 
-export async function addPrize(data: Omit<StoredPrize, 'id'>): Promise<StoredPrize> {
-  return prisma.prize.create({ data });
+export async function addPrize(userId: string, data: Omit<StoredPrize, 'id'>): Promise<StoredPrize> {
+  return prisma.prize.create({ data: { ...data, userId } });
 }
 
 export async function updatePrize(
   id: string,
+  userId: string,
   data: Omit<StoredPrize, 'id'>,
 ): Promise<StoredPrize | null> {
   try {
-    return await prisma.prize.update({ where: { id }, data });
+    return await prisma.prize.update({ where: { id, userId }, data });
   } catch {
     return null;
   }
 }
 
-export async function removePrize(id: string): Promise<boolean> {
+export async function removePrize(id: string, userId: string): Promise<boolean> {
   try {
-    await prisma.prize.delete({ where: { id } });
+    await prisma.prize.delete({ where: { id, userId } });
     return true;
   } catch {
     return false;

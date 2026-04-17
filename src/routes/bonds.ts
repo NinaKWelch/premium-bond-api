@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { requireAuth } from '../middleware/auth.js';
 import { calculate } from '../controllers/bonds.controller';
 import {
   list as listTransactions,
@@ -14,6 +15,8 @@ import {
 } from '../controllers/prizes.controller';
 
 const router = Router();
+
+router.use(requireAuth);
 
 // --- Transactions ---
 

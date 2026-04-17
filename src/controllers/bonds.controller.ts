@@ -1,10 +1,12 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import { calculateBondStats } from '../services/bonds.service';
 import { getAll } from '../store/store';
+import type { AuthenticatedRequest } from '../middleware/auth.js';
 
-export async function calculate(_req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function calculate(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { transactions, prizes } = await getAll();
+    const { userId } = req as AuthenticatedRequest;
+    const { transactions, prizes } = await getAll(userId);
 
     if (!transactions.some((t) => t.type === 'deposit')) {
       res.status(400).json({ error: 'No deposits found — add at least one deposit first' });

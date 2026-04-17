@@ -1,4 +1,4 @@
-import { calculateBondStats, wouldBalanceGoNegative, isPrizeEligible, type Transaction, type Prize } from '../src/services/bonds.service';
+import { calculateBondStats, wouldBalanceGoNegative, isPrizeEligible, type Transaction, type Prize } from '../bonds.service';
 
 const d = (dateStr: string) => new Date(dateStr);
 

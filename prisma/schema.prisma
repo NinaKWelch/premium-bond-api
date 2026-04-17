@@ -13,15 +13,28 @@ enum TransactionType {
   reinvestment
 }
 
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String
+  createdAt    DateTime      @default(now())
+  transactions Transaction[]
+  prizes       Prize[]
+}
+
 model Transaction {
   id     String          @id @default(uuid())
   date   String
   amount Float
   type   TransactionType
+  userId String
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Prize {
   id     String @id @default(uuid())
   date   String
   amount Float
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

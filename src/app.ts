@@ -3,6 +3,7 @@ import cors from 'cors';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import bondsRouter from './routes/bonds';
+import usersRouter from './routes/users';
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? '')
   .split(',')
@@ -115,8 +116,62 @@ const swaggerSpec = swaggerJsdoc({
             },
           },
         },
+        RegisterBody: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: { type: 'string', format: 'email', example: 'user@example.com' },
+            password: { type: 'string', minLength: 8, example: 'securepassword' },
+          },
+        },
+        LoginBody: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: { type: 'string', format: 'email', example: 'user@example.com' },
+            password: { type: 'string', example: 'securepassword' },
+          },
+        },
+        UserResponse: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' },
+            email: { type: 'string', example: 'user@example.com' },
+          },
+        },
+        LoginResponse: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' },
+            email: { type: 'string', example: 'user@example.com' },
+            token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+          },
+        },
+        UserWithActivity: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', example: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' },
+            email: { type: 'string', example: 'user@example.com' },
+            createdAt: { type: 'string', format: 'date-time' },
+            premiumBonds: {
+              type: 'object',
+              properties: {
+                transactions: { type: 'array', items: { $ref: '#/components/schemas/Transaction' } },
+                prizes: { type: 'array', items: { $ref: '#/components/schemas/Prize' } },
+              },
+            },
+          },
+        },
+      },
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
       },
     },
+    security: [{ bearerAuth: [] }],
   },
   // In production (Docker) the app runs from dist/, so point at compiled JS.
   // In development ts-node-dev runs from src/, so point at TypeScript source.
@@ -125,6 +180,7 @@ const swaggerSpec = swaggerJsdoc({
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+app.use('/api/users', usersRouter);
 app.use('/api/bonds', bondsRouter);
 
 app.use((_req: Request, res: Response) => {
