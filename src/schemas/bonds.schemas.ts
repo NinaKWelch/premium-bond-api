@@ -7,7 +7,7 @@ const yearMonthSchema = z
 export const addTransactionSchema = z.object({
   date: yearMonthSchema,
   amount: z.number().positive('amount must be a positive number').max(50000, 'maximum holding is £50,000'),
-  type: z.enum(['deposit', 'withdrawal']),
+  type: z.enum(['deposit', 'withdrawal', 'reinvestment']),
 });
 
 export const addPrizeSchema = z.object({

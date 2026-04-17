@@ -6,7 +6,7 @@ export interface StoredTransaction {
   id: string;
   date: string;
   amount: number;
-  type: 'deposit' | 'withdrawal';
+  type: 'deposit' | 'withdrawal' | 'reinvestment';
 }
 
 export interface StoredPrize {
@@ -20,7 +20,7 @@ const prisma = new PrismaClient({ adapter });
 
 export async function getTransactions(): Promise<StoredTransaction[]> {
   const rows = await prisma.transaction.findMany({ orderBy: { date: 'asc' } });
-  return rows.map((r) => ({ ...r, type: r.type as 'deposit' | 'withdrawal' }));
+  return rows.map((r) => ({ ...r, type: r.type as 'deposit' | 'withdrawal' | 'reinvestment' }));
 }
 
 export async function getPrizes(): Promise<StoredPrize[]> {
@@ -38,7 +38,7 @@ export async function addTransaction(
   const row = await prisma.transaction.create({
     data: { ...data, type: data.type as TransactionType },
   });
-  return { ...row, type: row.type as 'deposit' | 'withdrawal' };
+  return { ...row, type: row.type as 'deposit' | 'withdrawal' | 'reinvestment' };
 }
 
 export async function updateTransaction(
@@ -50,7 +50,7 @@ export async function updateTransaction(
       where: { id },
       data: { ...data, type: data.type as TransactionType },
     });
-    return { ...row, type: row.type as 'deposit' | 'withdrawal' };
+    return { ...row, type: row.type as 'deposit' | 'withdrawal' | 'reinvestment' };
   } catch {
     return null;
   }

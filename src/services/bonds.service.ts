@@ -1,8 +1,10 @@
 export interface Transaction {
   date: Date;
   amount: number;
-  type: 'deposit' | 'withdrawal';
+  type: 'deposit' | 'withdrawal' | 'reinvestment';
 }
+
+const isDeposit = (t: Transaction) => t.type === 'deposit' || t.type === 'reinvestment';
 
 export interface Prize {
   date: Date;
@@ -21,6 +23,7 @@ export interface CalculationResult {
   byYear: YearResult[];
   overall: {
     totalInvested: number;
+    cashDeposited: number;
     totalPrizesWon: number;
     averageAnnualRatePct: number;
   };
@@ -60,7 +63,7 @@ export function wouldBalanceGoNegative(transactions: Transaction[]): boolean {
   const sorted = [...transactions].sort((a, b) => a.date.getTime() - b.date.getTime());
   let balance = 0;
   for (const t of sorted) {
-    balance += t.type === 'deposit' ? t.amount : -t.amount;
+    balance += isDeposit(t) ? t.amount : -t.amount;
     if (balance < 0) return true;
   }
   return false;
@@ -84,7 +87,7 @@ function averageBalanceForYear(year: number, transactions: Transaction[]): numbe
   // Balance inherited from all transactions before this year
   const openingBalance = transactions
     .filter((t) => t.date < yearStart)
-    .reduce((sum, t) => sum + (t.type === 'deposit' ? t.amount : -t.amount), 0);
+    .reduce((sum, t) => sum + (isDeposit(t) ? t.amount : -t.amount), 0);
 
   // Transactions within this year, sorted by date
   const eventsThisYear = transactions
@@ -99,7 +102,7 @@ function averageBalanceForYear(year: number, transactions: Transaction[]): numbe
     const days =
       (event.date.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24);
     weightedSum += balance * days;
-    balance += event.type === 'deposit' ? event.amount : -event.amount;
+    balance += isDeposit(event) ? event.amount : -event.amount;
     periodStart = event.date;
   }
 
@@ -131,7 +134,7 @@ export function calculateBondStats(
       .reduce((sum, p) => sum + p.amount, 0);
     const amountInvested = transactions
       .filter((t) => t.date.getFullYear() === year)
-      .reduce((sum, t) => sum + (t.type === 'deposit' ? t.amount : -t.amount), 0);
+      .reduce((sum, t) => sum + (isDeposit(t) ? t.amount : -t.amount), 0);
 
     const effectiveRatePct =
       avgBalance > 0 ? Number(((prizesWon / avgBalance) * 100).toFixed(2)) : 0;
@@ -140,6 +143,9 @@ export function calculateBondStats(
   }
 
   const totalInvested = transactions
+    .reduce((sum, t) => sum + (isDeposit(t) ? t.amount : -t.amount), 0);
+  const cashDeposited = transactions
+    .filter((t) => t.type === 'deposit' || t.type === 'withdrawal')
     .reduce((sum, t) => sum + (t.type === 'deposit' ? t.amount : -t.amount), 0);
   const totalPrizesWon = prizes.reduce((sum, p) => sum + p.amount, 0);
 
@@ -159,6 +165,7 @@ export function calculateBondStats(
     byYear,
     overall: {
       totalInvested,
+      cashDeposited,
       totalPrizesWon,
       averageAnnualRatePct,
     },

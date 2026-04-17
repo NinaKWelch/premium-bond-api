@@ -10,6 +10,7 @@ datasource db {
 enum TransactionType {
   deposit
   withdrawal
+  reinvestment
 }
 
 model Transaction {
