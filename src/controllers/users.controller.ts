@@ -63,7 +63,7 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       return;
     }
 
-    const token = jwt.sign({ sub: user.id, email: user.email }, secret, { expiresIn: '7d' });
+    const token = jwt.sign({ sub: user.id, email: user.email }, secret, { expiresIn: '30d' });
 
     res.json({ id: user.id, email: user.email, token });
   } catch (err) {

@@ -107,6 +107,8 @@ describe('PUT /api/bonds/transactions/:id', () => {
 
 describe('DELETE /api/bonds/transactions/:id', () => {
   it('returns 204 when transaction is deleted', async () => {
+    mockStore.getTransactions.mockResolvedValue([{ id: 'abc', ...DEPOSIT }]);
+    mockStore.getPrizes.mockResolvedValue([]);
     mockStore.removeTransaction.mockResolvedValue(true);
     await request(app).delete('/api/bonds/transactions/abc').set(bearer).expect(204);
   });

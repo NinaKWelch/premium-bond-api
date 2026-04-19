@@ -4,13 +4,15 @@ import type { AuthenticatedRequest } from '../../middleware/auth';
 
 jest.mock('../../store/store', () => ({
   getTransactions: jest.fn(),
+  getPrizes: jest.fn(),
   addTransaction: jest.fn(),
   updateTransaction: jest.fn(),
   removeTransaction: jest.fn(),
 }));
 
-import { getTransactions, addTransaction, updateTransaction, removeTransaction } from '../../store/store';
+import { getTransactions, getPrizes, addTransaction, updateTransaction, removeTransaction } from '../../store/store';
 const mockGetTransactions = jest.mocked(getTransactions);
+const mockGetPrizes = jest.mocked(getPrizes);
 const mockAddTransaction = jest.mocked(addTransaction);
 const mockUpdateTransaction = jest.mocked(updateTransaction);
 const mockRemoveTransaction = jest.mocked(removeTransaction);
@@ -33,7 +35,10 @@ const makeRes = () => {
 
 const next = jest.fn() as NextFunction;
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockGetPrizes.mockResolvedValue([]);
+});
 
 // ---------------------------------------------------------------------------
 // list
@@ -160,7 +165,7 @@ describe('update', () => {
 
 describe('remove', () => {
   it('returns 204 when transaction is deleted', async () => {
-    mockRemoveTransaction.mockResolvedValue(true);
+    mockGetTransactions.mockResolvedValue([DEPOSIT]);
 
     const res = makeRes();
     await remove(makeReq({ params: { id: '1' } }), res, next);
@@ -171,7 +176,7 @@ describe('remove', () => {
   });
 
   it('returns 404 when transaction does not exist', async () => {
-    mockRemoveTransaction.mockResolvedValue(false);
+    mockGetTransactions.mockResolvedValue([]);
 
     const res = makeRes();
     await remove(makeReq({ params: { id: 'bad' } }), res, next);
@@ -180,9 +185,35 @@ describe('remove', () => {
     expect(res.json).toHaveBeenCalledWith({ error: expect.stringMatching(/not found/i) });
   });
 
+  it('returns 400 when deleting the deposit would cause negative balance', async () => {
+    mockGetTransactions.mockResolvedValue([
+      DEPOSIT,
+      { id: '2', date: '2022-06', amount: 1000, type: 'withdrawal' as const },
+    ]);
+
+    const res = makeRes();
+    await remove(makeReq({ params: { id: '1' } }), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: expect.stringMatching(/withdrawal/i) });
+    expect(mockRemoveTransaction).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when deleting the deposit would orphan prizes', async () => {
+    mockGetTransactions.mockResolvedValue([DEPOSIT]);
+    mockGetPrizes.mockResolvedValue([{ id: 'p1', date: '2022-06', amount: 25 }]);
+
+    const res = makeRes();
+    await remove(makeReq({ params: { id: '1' } }), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: expect.stringMatching(/prizes/i) });
+    expect(mockRemoveTransaction).not.toHaveBeenCalled();
+  });
+
   it('calls next with error when store throws', async () => {
     const err = new Error('DB failure');
-    mockRemoveTransaction.mockRejectedValue(err);
+    mockGetTransactions.mockRejectedValue(err);
 
     await remove(makeReq({ params: { id: '1' } }), makeRes(), next);
 
