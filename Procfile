@@ -1,2 +1,2 @@
 release: npx prisma migrate deploy
-web: node dist/index.js
+web: tsx src/index.ts
