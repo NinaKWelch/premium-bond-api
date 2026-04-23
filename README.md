@@ -2,6 +2,8 @@
 
 A REST API for calculating the actual effective interest rate earned from UK NS&I Premium Bonds, based on your real investment history and prize winnings. Built to power the [NinaKWelch/premium-bond](https://github.com/NinaKWelch/premium-bond) frontend.
 
+**Deployed on Heroku.** Swagger UI available at `/api-docs` on the live API.
+
 ## How it works
 
 1. Create an account and log in to receive a JWT
@@ -13,7 +15,7 @@ A REST API for calculating the actual effective interest rate earned from UK NS&
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - A PostgreSQL database (the project uses [Neon](https://neon.tech) — free tier available)
 
 ### Local development
@@ -30,7 +32,7 @@ JWT_SECRET=your-secret-here
 Generate a strong `JWT_SECRET` with:
 
 ```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+openssl rand -base64 32
 ```
 
 Then install dependencies and run the dev server:
@@ -50,37 +52,36 @@ The project uses [Prisma](https://www.prisma.io/) with PostgreSQL. To create the
 npx prisma migrate deploy
 ```
 
-### Docker
-
-```bash
-docker compose up --build
-```
-
-Rebuilding is only needed when dependencies or the `Dockerfile` change. For subsequent starts:
-
-```bash
-docker compose up
-```
-
-To stop:
-
-```bash
-docker compose down
-```
-
 ## Scripts
 
 | Command | Description |
 |---|---|
 | `npm run dev` | Start development server with hot reload |
-| `npm run build` | Compile TypeScript |
-| `npm start` | Run compiled build |
+| `npm run build` | Generate the Prisma client |
+| `npm start` | Run the server with tsx |
 | `npm test` | Run tests |
 | `npm run lint` | Run ESLint |
 
+## Deployment
+
+The API is deployed to [Heroku](https://heroku.com) using the Node.js buildpack. The `Procfile` runs database migrations on each release and starts the server:
+
+```
+release: npx prisma migrate deploy
+web: tsx src/index.ts
+```
+
+### Heroku environment variables
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Set automatically by the Heroku Postgres add-on |
+| `JWT_SECRET` | Long random string for signing JWTs |
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed frontend origins |
+
 ## API
 
-Swagger UI is available at `http://localhost:3000/api-docs` once the server is running. Use it to explore and test all endpoints — log in via `POST /api/users/login` and click **Authorize** to set your token.
+Swagger UI is available at `/api-docs` once the server is running. Use it to explore and test all endpoints — log in via `POST /api/users/login` and click **Authorize** to set your token.
 
 ### Authentication
 
